@@ -1,9 +1,13 @@
 const express = require('express');
+const moment = require('moment-timezone');
 const cors = require('cors');
 var admin = require("firebase-admin");
 var serviceAccount = require("../serviceAccountKey.json");
 const OpenAI = require('openai');
 const openai = new OpenAI({ apiKey: process.argv[2] });
+
+
+
 
 // Initialize Express
 const app = express();
@@ -53,6 +57,25 @@ app.get('/citizenCount', async (req, res) => {
     res.send({ count: snapshot.size });
 });
 
+app.get('/mostRecentCitizens', async (req, res) => {
+    const snapshot = await db.orderBy('born', 'desc').limit(10).get();
+    const citizens = [];
+    snapshot.forEach(doc => {
+        citizens.push(doc.data());
+    });
+    res.send(citizens);
+});
+
+app.get('/neighborhoodStats', async (req, res) => {
+    const neighborhoodInfo = [];
+    for (const neighborhood of neighborhoodNames) {
+        const snapshot = await db.where('neighborhood', '==', neighborhood).get();
+        neighborhoodInfo.push({ neighborhood, count: snapshot.size });
+    }
+    neighborhoodInfo.sort((a, b) => a.neighborhood.localeCompare(b.neighborhood)); // Sort by neighborhood key
+    res.send(neighborhoodInfo);
+});
+
 app.get('/createCitizen', async (req, res) => {
     const completion = await openai.chat.completions.create({
         messages: [
@@ -81,7 +104,7 @@ app.get('/createCitizen', async (req, res) => {
 
     var citizen = trimProperties(JSON.parse(completion.choices[0].message.content));
     citizen.neighborhood = neighborhoodNames[Math.floor(Math.random() * neighborhoodNames.length)];
-    citizen.born = new Date().toLocaleString();
+    citizen.born = admin.firestore.Timestamp.fromDate(new Date());
 
     await db.add(citizen); //Wait for the citizen to be added to firestore before returning them.
     console.log("Citizen Born!");

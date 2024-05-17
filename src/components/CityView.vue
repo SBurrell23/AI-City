@@ -1,9 +1,35 @@
 <template>
-  <div class="hello">
-    <h1>Citizen Count: {{citizenCount}}</h1>
-    <button @click="createCitizen" :disabled="creatingCitizen">Create New Citizen</button>
-    <br><br>
-    <div>{{newCitizen}}</div>
+  <div class="container">
+
+    <div class="row">
+
+      <div class="col">
+        <h1>Citizen Count: {{citizenCount}}</h1>
+        <button @click="createCitizen" :disabled="creatingCitizen">Create New Citizen</button>
+        <br><br>
+        <pre>{{newCitizen}}</pre>
+      </div>
+
+      <div class="col">
+        <h4>Neighborhoods</h4>
+        <ul>
+          <li v-for="(hood,key) in neighborhoodStats" :key="key">
+            {{ hood.count }} {{ hood.neighborhood }}
+          </li>
+        </ul>
+      </div>
+
+      <div class="col">
+        <h4>Most Recent Births</h4>
+        <ul>
+          <li v-for="(citizen,key) in mostRecentCitizens" :key="key">
+            {{ citizen.firstName }} {{ citizen.lastName }} ({{citizen.age}})
+          </li>
+        </ul>
+      </div>
+
+    </div>
+
   </div>
 </template>
 
@@ -19,7 +45,9 @@ export default {
       url: "http://localhost:3000/",
       citizenCount : "?",
       creatingCitizen: false,
-      newCitizen: {}
+      newCitizen: {},
+      mostRecentCitizens: [],
+      neighborhoodStats: {}
     }
   },
   methods: {
@@ -32,12 +60,31 @@ export default {
         console.error(error);
       });
     },
+    getMostRecentCitizens() {
+      axios.get(this.url + "mostRecentCitizens")
+      .then(response => {
+        this.mostRecentCitizens = response.data;
+      })
+      .catch(error => {
+        console.error(error);
+      });
+    },
+    getNeighborhoodStats() {
+      // axios.get(this.url + "neighborhoodStats")
+      // .then(response => {
+      //   this.neighborhoodStats = response.data;
+      // })
+      // .catch(error => {
+      //   console.error(error);
+      // });
+    },
     createCitizen() {
       this.creatingCitizen = true;
       axios.get(this.url + "createCitizen")
       .then(response => {
         this.newCitizen = response.data;
         this.getNumCitizens();
+        this.getMostRecentCitizens();
       })
       .catch(error => {
         console.error(error);
@@ -52,10 +99,17 @@ export default {
   },
   mounted() {
     this.getNumCitizens();
+    this.getMostRecentCitizens();
+    this.getNeighborhoodStats();
   },
   // Add other lifecycle hooks here
 }
 </script>
 
 <style scoped>
+
+li {
+  text-align: left;
+}
+
 </style>
