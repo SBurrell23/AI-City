@@ -1,5 +1,5 @@
 <template>
-  <CityView msg="Welcome to AI City!"/>
+  <CityView/>
 </template>
 
 <script>
