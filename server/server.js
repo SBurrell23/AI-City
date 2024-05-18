@@ -6,6 +6,11 @@ var serviceAccount = require("../serviceAccountKey.json");
 const OpenAI = require('openai');
 const openai = new OpenAI({ apiKey: process.argv[2] });
 
+const jobs = require('./jobs.json');
+const firstNames = require('./firstNames.json');
+const lastNames = require('./lastNames.json');
+const countries = require('./countries.json');
+
 
 
 
@@ -84,15 +89,15 @@ app.get('/createCitizen', async (req, res) => {
                 content:`create a random citizen for my city building game. 
                 The citizen is represented by a json object with the following properties:
                 {
-                    "firstName": "random name ${startOrEnd()} with the letter '${randChar()}'",
-                    "lastName": "random last name ${startOrEnd()} with the letter '${randChar()}'",
-                    "job": "random job starting with the letter '${randChar()}'",
-                    "age": random age between 1 - 100,
-                    "hobby": "random hobby starting with the letter '${randChar()}'",
-                    "favoriteFood": "random food starting with the letter '${randChar()}'"
+                    "firstName": "${getRandomFirstName()}",
+                    "lastName": "${getRandomLastName()}",
+                    "job": "${getRandomJob()}",
+                    "age": "${randomAge()}",
+                    "country": "${getRandomCountry()}",
+                    "favoriteFood": "",
+                    "favoriteHobby": "",
                 }
-                Your job is to fill in the properties with crazy but realistic values.
-                Be diverse and creative! Make the jobs and hobbies unique and interesting.
+                Your job is to fill in the favoriteFood and favoriteHobby with the thing you think would make sense based on the job, name, age and country.
                 `
             },
             { role: "user", content: ""},
@@ -103,6 +108,7 @@ app.get('/createCitizen', async (req, res) => {
     });
 
     var citizen = trimProperties(JSON.parse(completion.choices[0].message.content));
+    delete citizen.country;
     citizen.neighborhood = neighborhoodNames[Math.floor(Math.random() * neighborhoodNames.length)];
     citizen.born = admin.firestore.Timestamp.fromDate(new Date());
 
@@ -113,10 +119,28 @@ app.get('/createCitizen', async (req, res) => {
 
 });
 
-function startOrEnd() {
-    const options = ["starting", "ending"];
-    const randomIndex = Math.floor(Math.random() * options.length);
-    return options[randomIndex];
+function getRandomJob(){
+    const randomIndex = Math.floor(Math.random() * jobs.length);
+    return jobs[randomIndex];
+}
+
+function getRandomFirstName(){
+    const randomIndex = Math.floor(Math.random() * firstNames.length);
+    return firstNames[randomIndex];
+}
+
+function getRandomLastName(){
+    const randomIndex = Math.floor(Math.random() * lastNames.length);
+    return lastNames[randomIndex];
+}
+
+function getRandomCountry(){
+    const randomIndex = Math.floor(Math.random() * countries.length);
+    return countries[randomIndex];
+}
+
+function randomAge() {
+    return Math.floor(Math.random() * (100 - 16 + 1) + 16);
 }
 
 function randChar() {
