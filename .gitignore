@@ -24,3 +24,5 @@ pnpm-debug.log*
 fbconfig.env
 serviceAccountKey.json
 API.key
+server/sql.env
+sql.env

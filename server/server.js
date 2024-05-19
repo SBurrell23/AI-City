@@ -1,28 +1,31 @@
-const express = require('express');
-const moment = require('moment-timezone');
+require('dotenv').config({ path: './sql.env' });
+const express = require('express'); 
 const cors = require('cors');
-var admin = require("firebase-admin");
-var serviceAccount = require("../serviceAccountKey.json");
-const OpenAI = require('openai');
-const openai = new OpenAI({ apiKey: process.argv[2] });
+const mysql = require('mysql2');
+const moment = require('moment-timezone');
+const OpenAI = require('openai');  
+const openai = new OpenAI({ apiKey: process.env.OPENAI_KEY });
 
 const jobs = require('./jobs.json');
 const firstNames = require('./firstNames.json');
 const lastNames = require('./lastNames.json');
 const countries = require('./countries.json');
-
-
-
+const personalities = require('./personalities.json');
 
 // Initialize Express
 const app = express();
-app.use(express.json());
+app.use(express.json()); 
 const port = 3000;
 app.use(cors()); //Adjust this for production
 
-// Initialize Firebase
-admin.initializeApp({credential: admin.credential.cert(serviceAccount)});
-const db = admin.firestore().collection('AI-City');
+// MySQL Connection Pool
+const connectionPool = mysql.createPool({
+    host: process.env.DB_HOST, 
+    user: process.env.DB_USER,
+    password: process.env.DB_PASSWORD,
+    database: process.env.DB_NAME,
+    connectionLimit: 500  
+}); 
 
 const neighborhoodNames = [
     "Silverwood Heights",
@@ -54,31 +57,72 @@ const neighborhoodNames = [
 
 // Routes
 app.get('/ping', (req, res) => {
-    res.send('Pong!');
+    connectionPool.getConnection((err, connection) => {
+        if (err) {
+            res.send("Error getting connection from pool");
+            return;
+        }
+        connection.ping((err) => {
+            connection.release();
+            if (err) {
+                res.send("Ping error: " + err);
+            } else {
+                res.send("Database ping successful");
+            }
+        });
+    });
 });
 
 app.get('/citizenCount', async (req, res) => {
-    const snapshot = await db.get();
-    res.send({ count: snapshot.size });
+    connectionPool.getConnection((err, connection) => {
+        if (err) {
+            res.send("Error getting connection: " + err);
+        } else {
+            connection.query('SELECT COUNT(*) AS count FROM people', (err, result) => {
+                connection.release();
+                if (err) {
+                    res.send("Error executing query: " + err);
+                } else {
+                    const count = result[0].count;
+                    res.send(count.toString());
+                }
+            });
+        }
+    });
 });
 
 app.get('/mostRecentCitizens', async (req, res) => {
-    const snapshot = await db.orderBy('born', 'desc').limit(10).get();
-    const citizens = [];
-    snapshot.forEach(doc => {
-        citizens.push(doc.data());
+    connectionPool.getConnection((err, connection) => {
+        if (err) {
+            res.send("Error getting connection: " + err);
+        } else {
+            connection.query('SELECT * FROM people ORDER BY born DESC LIMIT 10', (err, result) => {
+                connection.release();
+                if (err) {
+                    res.send("Error executing query: " + err);
+                } else {
+                    res.send(result);
+                }
+            });
+        }
     });
-    res.send(citizens);
 });
 
-app.get('/neighborhoodStats', async (req, res) => {
-    const neighborhoodInfo = [];
-    for (const neighborhood of neighborhoodNames) {
-        const snapshot = await db.where('neighborhood', '==', neighborhood).get();
-        neighborhoodInfo.push({ neighborhood, count: snapshot.size });
-    }
-    neighborhoodInfo.sort((a, b) => a.neighborhood.localeCompare(b.neighborhood)); // Sort by neighborhood key
-    res.send(neighborhoodInfo);
+app.get('/neighborhoodStats', async (req, res) => { 
+    connectionPool.getConnection((err, connection) => {
+        if (err) {
+            res.send("Error getting connection: " + err);
+        } else {
+            connection.query('SELECT neighborhood, COUNT(*) AS count FROM people GROUP BY neighborhood', (err, result) => {
+                connection.release();
+                if (err) {
+                    res.send("Error executing query: " + err);
+                } else {
+                    res.send(result);
+                }
+            });
+        }
+    });
 });
 
 app.get('/createCitizen', async (req, res) => {
@@ -94,6 +138,7 @@ app.get('/createCitizen', async (req, res) => {
                     "job": "${getRandomJob()}",
                     "age": "${randomAge()}",
                     "country": "${getRandomCountry()}",
+                    "personality": "${getRandomPersonality()}",
                     "favoriteFood": "",
                     "favoriteHobby": "",
                 }
@@ -108,16 +153,54 @@ app.get('/createCitizen', async (req, res) => {
     });
 
     var citizen = trimProperties(JSON.parse(completion.choices[0].message.content));
-    delete citizen.country;
     citizen.neighborhood = neighborhoodNames[Math.floor(Math.random() * neighborhoodNames.length)];
-    citizen.born = admin.firestore.Timestamp.fromDate(new Date());
+    citizen.born = moment.utc().format('YYYY-MM-DD HH:mm:ss');
+    citizen.parentA = null;
+    citizen.parentB = null;
+    citizen = removeHallucinations(citizen);
 
-    await db.add(citizen); //Wait for the citizen to be added to firestore before returning them.
-    console.log("Citizen Born!");
-    console.log(citizen);
-    res.send(citizen);
-
+    connectionPool.getConnection((err, connection) => {
+        if (err) {
+            res.send("Error getting connection: " + err);
+        } else {
+            const query = 'INSERT INTO people SET ?';
+            connection.query(query, citizen, (err, result) => {
+                connection.release();
+                if (err) {
+                    res.send("Error executing query: " + err);
+                } else {
+                    console.log("Citizen Born!");
+                    console.log(citizen);
+                    res.send(citizen);
+                    //res.send(result);
+                }
+            });
+        }
+    });
 });
+
+function removeHallucinations(obj) {
+    var validKeys = [
+        "firstName", 
+        "lastName", 
+        "job", 
+        "age", 
+        "favoriteFood", 
+        "favoriteHobby",
+        "neighborhood",
+        "born",
+        "parentA",
+        "parentB",
+        "personality", 
+        "country"
+    ];
+    for (let key in obj) {
+        if (!validKeys.includes(key)) {
+            delete obj[key];
+        }
+    }
+    return obj;
+}
 
 function getRandomJob(){
     const randomIndex = Math.floor(Math.random() * jobs.length);
@@ -139,14 +222,13 @@ function getRandomCountry(){
     return countries[randomIndex];
 }
 
-function randomAge() {
-    return Math.floor(Math.random() * (100 - 16 + 1) + 16);
+function getRandomPersonality(){
+    const randomIndex = Math.floor(Math.random() * personalities.length);
+    return personalities[randomIndex];
 }
 
-function randChar() {
-    const characters = 'abcdefghijklmnopqrstuvwxyz';
-    const randomIndex = Math.floor(Math.random() * characters.length);
-    return characters[randomIndex];
+function randomAge() {
+    return Math.floor(Math.random() * (100 - 16 + 1) + 16);
 }
 
 //Trim all string properties to 100 characters in case of odd ai behavior

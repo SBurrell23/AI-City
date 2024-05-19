@@ -70,13 +70,13 @@ export default {
       });
     },
     getNeighborhoodStats() {
-      // axios.get(this.url + "neighborhoodStats")
-      // .then(response => {
-      //   this.neighborhoodStats = response.data;
-      // })
-      // .catch(error => {
-      //   console.error(error);
-      // });
+      axios.get(this.url + "neighborhoodStats")
+      .then(response => {
+        this.neighborhoodStats = response.data;
+      })
+      .catch(error => {
+        console.error(error);
+      });
     },
     createCitizen() {
       this.creatingCitizen = true;
@@ -85,6 +85,7 @@ export default {
         this.newCitizen = response.data;
         this.getNumCitizens();
         this.getMostRecentCitizens();
+        this.getNeighborhoodStats();
       })
       .catch(error => {
         console.error(error);
