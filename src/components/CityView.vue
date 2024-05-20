@@ -3,15 +3,14 @@
 
     <div class="row">
 
-      <div class="col">
-        <h1>Citizen Count: {{citizenCount}}</h1>
-        <button @click="createCitizen" :disabled="creatingCitizen">Create New Citizen</button>
-        <br><br>
-        <pre>{{newCitizen}}</pre>
+      Citizen Count: {{citizenCount}}
+
+      <div class="col-12">
+        <PersonDetails :person="newestCitizen" />
       </div>
 
-      <div class="col">
-        <h4>Neighborhoods</h4>
+      <div class="col-4">
+        <h4 class="subHeader">Neighborhoods</h4>
         <ul>
           <li v-for="(hood,key) in neighborhoodStats" :key="key">
             {{ hood.count }} {{ hood.neighborhood }}
@@ -19,13 +18,33 @@
         </ul>
       </div>
 
-      <div class="col">
-        <h4>Most Recent Births</h4>
+      <div class="col-4">
+        <h4 class="subHeader">Most Recent Births</h4>
         <ul>
           <li v-for="(citizen,key) in mostRecentCitizens" :key="key">
-            {{ citizen.firstName }} {{ citizen.lastName }} ({{citizen.age}})
+            {{ citizen.firstName }} {{ citizen.lastName }}
           </li>
         </ul>
+      </div>
+
+      <div class="col-4">
+        <h4 class="subHeader">Population Age Distribution</h4>
+        <table class="table table-sm table-bordered">
+          <thead>
+        <tr>
+          <th>Age Group</th>
+          <th>Count</th>
+          <th>Percent</th>
+        </tr>
+          </thead>
+          <tbody>
+        <tr v-for="(age, key) in populationAgeDistribution" :key="key">
+          <td>{{ age.ageGroup }}-{{ age.ageGroup + 10 }}</td>
+          <td>{{ age.count }}</td>
+          <td>{{ age.percent }}%</td>
+        </tr>
+          </tbody>
+        </table>
       </div>
 
     </div>
@@ -35,26 +54,30 @@
 
 <script>
 import axios from 'axios';
+import PersonDetails from './PersonDetails.vue';
 
 export default {
   name: 'CityView',
+  components: {
+    PersonDetails
+  },
   props: {
   },
   data() {
     return {
       url: "http://localhost:3000/",
       citizenCount : "?",
-      creatingCitizen: false,
-      newCitizen: {},
+      newestCitizen: {},
       mostRecentCitizens: [],
-      neighborhoodStats: {}
+      neighborhoodStats: {},
+      populationAgeDistribution: [],
     }
   },
   methods: {
     getNumCitizens() {
       axios.get(this.url + "citizenCount")
       .then(response => {
-        this.citizenCount = response.data.count;
+        this.citizenCount = response.data;
       })
       .catch(error => {
         console.error(error);
@@ -78,14 +101,23 @@ export default {
         console.error(error);
       });
     },
-    createCitizen() {
-      this.creatingCitizen = true;
-      axios.get(this.url + "createCitizen")
+    getPopulationAgeDistribution() {
+      axios.get(this.url + "populationAgeDistribution")
       .then(response => {
-        this.newCitizen = response.data;
+        this.populationAgeDistribution = response.data;
+      })
+      .catch(error => {
+        console.error(error);
+      });
+    },
+    getNewestCitizen() {
+      axios.get(this.url + "newestCitizen")
+      .then(response => {
+        this.newestCitizen = response.data;
         this.getNumCitizens();
         this.getMostRecentCitizens();
         this.getNeighborhoodStats();
+        this.getPopulationAgeDistribution();
       })
       .catch(error => {
         console.error(error);
@@ -99,6 +131,10 @@ export default {
     // Add your computed properties here
   },
   mounted() {
+    this.getNewestCitizen();
+    setInterval(() => {
+      this.getNewestCitizen();
+    }, 10000);
     this.getNumCitizens();
     this.getMostRecentCitizens();
     this.getNeighborhoodStats();
@@ -110,6 +146,10 @@ export default {
 <style scoped>
 
 li {
+  text-align: left;
+}
+
+.subHeader{
   text-align: left;
 }
 
