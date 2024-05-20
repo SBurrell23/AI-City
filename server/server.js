@@ -182,7 +182,7 @@ app.get('/createStartingCitizens', async (req, res) => {
 });
 
 birthNewCitizen();
-setInterval(birthNewCitizen, 10000);
+setInterval(birthNewCitizen, 5000); 
 
 async function birthNewCitizen(){
     const randomNeighborhood = neighborhoodNames[Math.floor(Math.random() * neighborhoodNames.length)];   
@@ -273,11 +273,11 @@ function handleDeaths(neighborhood,baby){
                 if (person.age > 100) {
                     return randNum < 0.5; // 1/2 chance every year for 100+ year olds
                 } else if (person.age > 90) {
-                    return randNum < 0.25; // 1/4 chance every year for 90+ year olds
+                    return randNum < 0.20; // 1/5 chance every year for 90+ year olds
                 } else if (person.age > 80) {
-                    return randNum < 0.1; // 1/10  chance every year for 80+ year olds
+                    return randNum < 0.066; // 1/15  chance every year for 80+ year olds
                 } else if (person.age > 70) {
-                    return randNum < 0.066; // 1/15 chance every year for 70+ year olds
+                    return randNum < 0.05; // 1/20 chance every year for 70+ year olds
                 }
                 return false;
             }).map(person => person.id);
