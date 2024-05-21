@@ -29,7 +29,6 @@ const connectionPool = mysql.createPool({
 }); 
 
 const neighborhoodNames = [
-    "Silverwood Heights",
     "Crystal Cove",
     "Emerald Valley",
     "Whispering Pines",
@@ -76,12 +75,12 @@ app.get('/ping', (req, res) => {
 
 app.get('/citizenCount', async (req, res) => {
     connectionPool.getConnection((err, connection) => {
-        connection.query('SELECT MAX(id) - MIN(id) + 1 AS `count` FROM people', (err, result) => {
+        connection.query('SELECT COUNT(*) AS total_records FROM `AI-City`.`people`', (err, result) => {
             connection.release();
             if (err) {
                 res.send("Error executing query: " + err);
             } else {
-                const count = result[0].count.toString();
+                const count = result[0].total_records.toString();
                 res.send(count);
             }
         });
@@ -118,7 +117,7 @@ app.get('/populationAgeDistribution', async (req, res) => {
 
 app.get('/mostRecentCitizens', async (req, res) => {
     connectionPool.getConnection((err, connection) => {
-        connection.query('SELECT * FROM people ORDER BY born DESC LIMIT 10', (err, result) => {
+        connection.query('SELECT * FROM people ORDER BY born DESC LIMIT 5', (err, result) => {
             connection.release();
             if (err) {
                 res.send("Error executing query: " + err);
@@ -182,7 +181,7 @@ app.get('/createStartingCitizens', async (req, res) => {
 });
 
 birthNewCitizen();
-setInterval(birthNewCitizen, 5000); 
+setInterval(birthNewCitizen, 10000); 
 
 async function birthNewCitizen(){
     const randomNeighborhood = neighborhoodNames[Math.floor(Math.random() * neighborhoodNames.length)];   
@@ -275,9 +274,9 @@ function handleDeaths(neighborhood,baby){
                 } else if (person.age > 90) {
                     return randNum < 0.20; // 1/5 chance every year for 90+ year olds
                 } else if (person.age > 80) {
-                    return randNum < 0.066; // 1/15  chance every year for 80+ year olds
+                    return randNum < 0.05; // 1/20  chance every year for 80+ year olds
                 } else if (person.age > 70) {
-                    return randNum < 0.05; // 1/20 chance every year for 70+ year olds
+                    return randNum < 0.034; // 1/30 chance every year for 70+ year olds
                 }
                 return false;
             }).map(person => person.id);
