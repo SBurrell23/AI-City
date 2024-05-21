@@ -7,18 +7,11 @@
 
       <div class="col-8">
 
-        <div class="row allNeighborhoods" v-if="!viewingNeighborhood">
-          <div class="col-3 mb-2" v-for="(hood,key) in neighborhoodStats" :key="key">
-            <div class="card nhCard" v-on:click="viewingNeighborhood = hood.neighborhood">
-              <div class="card-body">
-                <h6 class="card-title"><b>{{ hood.neighborhood }}</b></h6>
-                <p class="card-text">Population: {{ hood.count }}</p>
-              </div>
-            </div>
-          </div>
+        <div v-if="!viewingNeighborhood">
+          <AllNeighborhoods :neighborhoodStats="neighborhoodStats" @view="viewNeighborHood" />
         </div>
         <div class="singleNeighborhood" v-else>
-          <NeighborhoodView :hoodName="viewingNeighborhood" @back="viewingNeighborhood=false" />
+          <SingleNeighborhood :hoodName="viewingNeighborhood" @back="viewingNeighborhood=false" />
         </div>
 
       </div>
@@ -64,13 +57,15 @@
 <script>
 import axios from 'axios';
 import PersonDetails from './PersonDetails.vue';
-import NeighborhoodView from './NeighborhoodView.vue';
+import SingleNeighborhood from './SingleNeighborhood.vue';
+import AllNeighborhoods from './AllNeighborhoods.vue';
 
 export default {
   name: 'CityView',
   components: {
     PersonDetails,
-    NeighborhoodView
+    SingleNeighborhood,
+    AllNeighborhoods
   },
   props: {
   },
@@ -137,6 +132,9 @@ export default {
       .finally(() => {
         this.creatingCitizen = false;
       });
+    },
+    viewNeighborHood(neighborhood) {
+      this.viewingNeighborhood = neighborhood;
     }
   },
   computed: {
@@ -146,7 +144,7 @@ export default {
     this.getNewestCitizen();
     setInterval(() => {
       this.getNewestCitizen();
-    }, 10000);
+    }, 1000);
     this.getNumCitizens();
     this.getMostRecentCitizens();
     this.getNeighborhoodStats();
@@ -171,19 +169,6 @@ li {
 
 .container{
   max-width: 90%;
-}
-
-.nhCard {
-  transition: background-color 0.4s ease;
-}
-
-.nhCard:hover {
-  background-color: rgb(228, 228, 228);
-  cursor: pointer;
-}
-
-.nhCard:not(:hover) {
-  background-color: transparent;
 }
 
 </style>

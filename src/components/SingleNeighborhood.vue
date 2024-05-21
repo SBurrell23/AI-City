@@ -15,7 +15,7 @@
 
 <script>
 export default {
-    name: 'NeighborhoodView',
+    name: 'SingleNeighborhood',
     props: {
         hoodName: String
     },

@@ -1,0 +1,14 @@
+when the population of a neighborhood changes client side make it flash getRandomPersonality
+
+create individual neighboorstats when a single hood is selected for display
+
+create individual ai neghboorhood images for card background
+
+create little graphical dot simulations in each neighboord to represent people
+(maybe color dots by age?)(maybe make younger dots move faster?)
+
+create, view random citizen button, to view citizen + parents in modal
+
+add more global stats to main ai city screen view
+
+switch AI person generation over to Gemini instead of chatgpt
