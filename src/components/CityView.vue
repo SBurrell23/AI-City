@@ -11,7 +11,7 @@
           <AllNeighborhoods :neighborhoodStats="neighborhoodStats" @view="viewNeighborHood" />
         </div>
         <div class="singleNeighborhood" v-else>
-          <SingleNeighborhood :hoodName="viewingNeighborhood" @back="viewingNeighborhood=false" />
+          <SingleNeighborhood :url="url" :hoodName="viewingNeighborhood" @back="viewingNeighborhood=false" />
         </div>
 
       </div>

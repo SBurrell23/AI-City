@@ -30,7 +30,8 @@ const connectionPool = mysql.createPool({
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
-    connectionLimit: 500  
+    connectionLimit: 500 ,
+    multipleStatements: true
 }); 
 
 const neighborhoodNames = [
@@ -73,6 +74,78 @@ app.get('/ping', (req, res) => {
                 res.send("Ping error: " + err);
             } else {
                 res.send("Database ping successful");
+            }
+        });
+    });
+});
+
+app.get('/neighborhoodDetails', async (req, res) => {
+
+    const combinedQuery = `
+        SELECT
+        COUNT(*) AS total_people,
+        AVG(age) AS avg_age,
+        MAX(age) AS max_age,
+        COUNT(*) / (
+            SELECT
+            COUNT(*)
+            FROM
+            \`AI-City\`.\`people\`
+        ) * 100 AS percent_of_total_population
+        FROM
+        \`AI-City\`.\`people\`
+        WHERE
+        neighborhood = ? ;
+        
+        SELECT
+        *
+        FROM
+        \`AI-City\`.\`people\`
+        WHERE
+        neighborhood = ?
+        ORDER BY
+        age DESC
+        LIMIT 3;
+        
+        SELECT
+        firstName,
+        COUNT(*) AS num_appearances
+        FROM
+        \`AI-City\`.\`people\`
+        WHERE
+        neighborhood = ?
+        GROUP BY
+        firstName
+        ORDER BY
+        num_appearances DESC
+        LIMIT 5;
+        
+        SELECT
+        *
+        FROM
+        \`AI-City\`.\`people\`
+        WHERE
+        neighborhood = ?
+        ORDER BY
+        born DESC
+        LIMIT 1;
+    `;
+
+    var q = req.query.name;
+
+    connectionPool.getConnection((err, connection) => {
+        connection.query(combinedQuery,[q,q,q,q],  (err, results) => {
+            connection.release();
+            if (err) {
+                res.send("Error executing query: " + err);
+            } else {
+                var outJson ={
+                    stats: results[0][0],
+                    oldestCitizens: results[1],
+                    commonNames: results[2],
+                    mostRecentBirth: results[3]
+                }
+                res.send(outJson);
             }
         });
     });
@@ -186,7 +259,7 @@ app.get('/createStartingCitizens', async (req, res) => {
 });
 
 birthNewCitizen();
-setInterval(birthNewCitizen, 10000); 
+//setInterval(birthNewCitizen, 10000); 
 
 async function birthNewCitizen(){
     const randomNeighborhood = getRandomNeighborhood();  
@@ -220,9 +293,14 @@ async function createNewCitizen(twoParents){
     The output should be a json object with the same keys as it's parents.
     Return ONLY the json object and nothing extra.
     `;
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+    try {
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        const text = response.text();
+    } catch (error) {
+        console.error("Error from Gemini:", error.statusText);
+        return;
+    }
 
     try {
         var baby = trimProperties(JSON.parse(text));
