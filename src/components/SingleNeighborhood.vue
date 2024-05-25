@@ -12,6 +12,8 @@
             <li>Max Age: {{ details.stats.max_age }}</li>
             <li>Percent of Total Population: {{ details.stats.percent_of_total_population }}%</li>
             </ul>
+            
+           <!-- need to display the rest of the details data next -->
 
    
             <button class="btn btn-primary btn-sm backButton" @click="$emit('back')"> Back To City</button>
